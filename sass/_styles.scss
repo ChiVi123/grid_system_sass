@@ -1,0 +1,18 @@
+*,
+::before,
+::after {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+.item {
+    padding: 11px 0;
+    font: {
+        size: 18px;
+        family: "system-ui";
+    }
+    text-align: center;
+    color: black;
+    background-color: #4294ff;
+}

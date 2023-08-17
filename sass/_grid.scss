@@ -1,0 +1,115 @@
+@use "sass:math";
+
+$grid-breakpoints: (
+    xs: 0,
+    sm: 576px,
+    md: 768px,
+    lg: 992px,
+    xl: 1200px,
+    xxl: 1400px,
+);
+$container-max-widths: (
+    sm: 540px,
+    md: 720px,
+    lg: 960px,
+    xl: 1140px,
+    xxl: 1320px,
+);
+$spacer: 16px;
+$gutters: (
+    0: 0,
+    1: $spacer * 0.25,
+    2: $spacer * 0.5,
+    3: $spacer,
+    4: $spacer * 1.5,
+    5: $spacer * 3,
+);
+$grid-gutter-width: 24px;
+$column-size: 12;
+
+@function space($gutter-width) {
+    @return $gutter-width * 0.5;
+}
+
+@mixin space-x($space: 24px) {
+    padding-right: space($space);
+    padding-left: space($space);
+}
+
+.container {
+    @extend .container-fluid;
+    @include space-x;
+}
+
+.container-fluid {
+    width: 100%;
+    margin-right: auto;
+    margin-left: auto;
+}
+
+.row {
+    display: flex;
+    flex-wrap: wrap;
+    margin-right: -$grid-gutter-width * 0.5;
+    margin-left: -$grid-gutter-width * 0.5;
+
+    &[class*="row-cols-"] > *,
+    > [class*="col-"] {
+        flex: 0 0 auto;
+    }
+}
+
+.col {
+    flex: 1 0;
+}
+
+@mixin create-query-media($dimension, $by-pass: false) {
+    @if $by-pass {
+        @content;
+    } @else {
+        @media (min-width: $dimension) {
+            @content;
+        }
+    }
+}
+
+@each $break-point, $dimension in $grid-breakpoints {
+    $max-width: map-get($container-max-widths, $break-point);
+    $by-pass: $break-point == xs;
+    $infix: if($by-pass, "", "-#{$break-point}");
+
+    @include create-query-media($dimension, $by-pass) {
+        .container {
+            max-width: $max-width;
+        }
+
+        /* GUTTER */
+        @for $i from 0 through 5 {
+            $gutter-x: map-get($gutters, $i);
+
+            .g#{$infix}-#{$i} > *,
+            .gx#{$infix}-#{$i} > * {
+                @include space-x($gutter-x);
+            }
+
+            .g#{$infix}-#{$i} > *,
+            .gy#{$infix}-#{$i} > * {
+                margin-top: space($gutter-x);
+            }
+        }
+
+        /* ROW COLUMNS */
+        @for $i from 1 through 12 {
+            .row.row-cols#{$infix}-#{$i} > * {
+                width: math.div(100%, $i);
+            }
+        }
+
+        /* COLUMN */
+        @for $i from 1 through 12 {
+            .col#{$infix}-#{$i} {
+                width: math.div(100%, $column-size) * $i;
+            }
+        }
+    }
+}
