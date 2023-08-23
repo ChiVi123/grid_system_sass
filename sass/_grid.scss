@@ -15,7 +15,10 @@ $container-max-widths: (
     xl: 1140px,
     xxl: 1320px,
 );
-$spacer: 16px;
+$grid-columns: 12;
+$grid-row-columns: 6 !default;
+$grid-gutter-width: 24px !default;
+$spacer: 16px !default;
 $gutters: (
     0: 0,
     1: $spacer * 0.25,
@@ -24,38 +27,38 @@ $gutters: (
     4: $spacer * 1.5,
     5: $spacer * 3,
 );
-$grid-gutter-width: 24px;
-$column-size: 12;
 
-@function space($gutter-width) {
-    @return $gutter-width * 0.5;
+@mixin width-column($property, $i) {
+    #{$property}: if($i > 0, math.div(100%, $grid-columns) * $i, 0);
 }
 
-@mixin space-x($space: 24px) {
-    padding-right: space($space);
-    padding-left: space($space);
+@mixin spacing-x($property, $value: auto) {
+    #{$property}-right: $value;
+    #{$property}-left: $value;
+}
+
+.container-fluid {
+    --grid-gutter-x: #{$grid-gutter-width};
+    --grid-gutter-y: 0;
+
+    width: 100%;
+    @include spacing-x(padding, calc(var(--grid-gutter-x) * 0.5));
+    @include spacing-x($property: margin);
 }
 
 .container {
     @extend .container-fluid;
-    @include space-x;
-}
-
-.container-fluid {
-    width: 100%;
-    margin-right: auto;
-    margin-left: auto;
 }
 
 .row {
     display: flex;
     flex-wrap: wrap;
-    margin-right: -$grid-gutter-width * 0.5;
-    margin-left: -$grid-gutter-width * 0.5;
+    margin-top: calc(var(--grid-gutter-y) * -1);
+    @include spacing-x(margin, calc(var(--grid-gutter-x) * 0.5 * -1));
 
-    &[class*="row-cols-"] > *,
-    > [class*="col-"] {
-        flex: 0 0 auto;
+    > * {
+        @include spacing-x(padding, calc(var(--grid-gutter-x) * 0.5));
+        margin-top: var(--grid-gutter-y);
     }
 }
 
@@ -63,8 +66,8 @@ $column-size: 12;
     flex: 1 0;
 }
 
-@mixin create-query-media($dimension, $by-pass: false) {
-    @if $by-pass {
+@mixin make-media-query($dimension, $bypass: false) {
+    @if $bypass {
         @content;
     } @else {
         @media (min-width: $dimension) {
@@ -73,43 +76,59 @@ $column-size: 12;
     }
 }
 
-@each $break-point, $dimension in $grid-breakpoints {
-    $max-width: map-get($container-max-widths, $break-point);
-    $by-pass: $break-point == xs;
-    $infix: if($by-pass, "", "-#{$break-point}");
+@mixin make-row-columns($infix) {
+    @for $i from 1 through $grid-row-columns {
+        .row.row-cols#{$infix}-#{$i} > * {
+            flex: 0 0 auto;
+            width: math.div(100%, $i);
+        }
+    }
+}
 
-    @include create-query-media($dimension, $by-pass) {
+@mixin make-columns($infix) {
+    @for $i from 1 through $grid-columns {
+        .col#{$infix}-#{$i} {
+            flex: 0 0 auto;
+            @include width-column("width", $i);
+        }
+    }
+}
+
+@mixin make-offsets($infix) {
+    @for $i from 0 to $grid-columns {
+        .offset#{$infix}-#{$i} {
+            @include width-column("margin-left", $i);
+        }
+    }
+}
+
+@mixin set-gutter($in-sub-fix, $side, $ratio) {
+    .g#{$in-sub-fix},
+    .g#{$side}#{$in-sub-fix} {
+        --grid-gutter-#{$side}: #{$ratio};
+    }
+}
+
+@mixin make-gutters($infix) {
+    @each $i, $ratio in $gutters {
+        @include set-gutter(#{$infix}-#{$i}, x, $ratio);
+        @include set-gutter(#{$infix}-#{$i}, y, $ratio);
+    }
+}
+
+@each $breakpoint, $dimension in $grid-breakpoints {
+    $max-width: map-get($container-max-widths, $breakpoint);
+    $is-xs: $breakpoint == xs;
+    $infix: if($is-xs, "", "-#{$breakpoint}");
+
+    @include make-media-query($dimension, $is-xs) {
         .container {
             max-width: $max-width;
         }
 
-        /* GUTTER */
-        @for $i from 0 through 5 {
-            $gutter-x: map-get($gutters, $i);
-
-            .g#{$infix}-#{$i} > *,
-            .gx#{$infix}-#{$i} > * {
-                @include space-x($gutter-x);
-            }
-
-            .g#{$infix}-#{$i} > *,
-            .gy#{$infix}-#{$i} > * {
-                margin-top: space($gutter-x);
-            }
-        }
-
-        /* ROW COLUMNS */
-        @for $i from 1 through 12 {
-            .row.row-cols#{$infix}-#{$i} > * {
-                width: math.div(100%, $i);
-            }
-        }
-
-        /* COLUMN */
-        @for $i from 1 through 12 {
-            .col#{$infix}-#{$i} {
-                width: math.div(100%, $column-size) * $i;
-            }
-        }
+        @include make-row-columns($infix);
+        @include make-columns($infix);
+        @include make-offsets($infix);
+        @include make-gutters($infix);
     }
 }
